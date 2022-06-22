@@ -1,15 +1,17 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const router = express.Router();
 const arduino = express();
 const mobile = express();
 
 const plantData = {};
 
-let flag = false;
-let message;
+let directionFlag = false;
+let directionMessage = "";
+
 let moveNum = 0;
-let moveDirection;
+let moveDirection = "";
+
+let waterFlag = false;
 
 arduino.use(bodyParser.json());
 arduino.use(bodyParser.urlencoded({ extended: true }));
@@ -25,6 +27,31 @@ mobile.listen(4000, () => {
    console.log(`Listening to PORT: 4000`);
 })
 
+// move arduino on mobile direction or location command
+arduino.get('/', async (req, res) => {
+   if(directionFlag) {
+      try {
+         directionFlag = false;
+         res.send({"message": directionMessage, "success": "true"});
+      } catch (err) {
+         console.log(err);
+      }
+   }
+   else if(waterFlag) {
+      waterFlag = false;
+      res.send({"message": "waterCommand", "success": "true"});
+   }
+   else if(moveNum > 0){
+      moveNum -= 2;
+      res.send({"message": moveDirection, "success": "true"});
+   }
+   else {
+      res.end('ok');
+      moveNum = 0;
+   }
+})
+
+// get camera position or sensor data from arduino periodically
 arduino.post('/', (req, res) => {
    if(req.body.cameraPosition) {
       plantData.cameraPosition = req.body.cameraPosition;
@@ -40,66 +67,47 @@ arduino.post('/', (req, res) => {
    res.end('ok');
 })
 
-// save
-// 계속 위치 받음, 앱이 위치 달라고 하면 서버가 준다.
-
-
-/**
- * 1. 앱이 current position 달라고 하면 주기
- * 2. 앱이 이 식물 포지션으로 가라고 하면 해당 포지션에 따라서 왼쪽 오른쪽으로 가라고 아두이노에게 명령
- *
- */
-
+// get plant data
 mobile.get('/plant', (req, res) => {
    res.send(plantData);
 })
 
+// send water command to arduino
 mobile.get('/water', (req, res) => {
-   router.post('https://ip-of-arduino:5000/water', (innerReq, innerRes) => { //router or arduino
-      innerRes.send({ "message": "waterCommand" });
-      innerRes.end('ok');
-   })
+   waterFlag = true;
    res.end('ok');
 })
 
-arduino.get('/', async (req, res) => {
-   if(flag) {
-      try {
-         console.log(flag, message);
-         flag = false;
-         res.send({"message": message, "success": "true"});
-      } catch (err) {
-         console.log(err);
-      }
-   }
-   else if(moveNum > 0){
-      console.log('movenum');
-      console.log(moveNum);
-      moveNum -= 2;
-      res.send({"message": moveDirection, "success": "true"});
-   }
-   else {
-      res.end('ok');
-      moveNum = 0;
-   }
+// give current camera position
+// need to check if this is needed
+mobile.get('/camera/position', (req, res) => {
+   res.send({"cameraPosition": plantData.cameraPosition});
 })
 
+// set direction for arduino to move on mobile command
 mobile.post('/camera/position', (req, res) => {
-   flag = true;
+   directionFlag = true;
    message = req.body.control;
-   res.send('ok');
+   res.send({"cameraPosition": plantData.cameraPosition});
 })
 
-mobile.post('/camera/location', (req, res) => {
-   moveNum = Math.abs(req.body.cameraPosition - plantData.cameraPosition);
-   if(req.body.cameraPosition > plantData.cameraPosition) moveDirection = "camLeft";
-   else moveDirection = "camRight";
-   res.end('ok');
-})
-
+// set camera position according to plant ID
 mobile.put('/plant', (req, res) => {
    if(req.body.plantID == '1') plantData.cameraPosition1 = req.body.cameraPosition;
    else plantData.cameraPosition2 = req.body.cameraPosition;
-   console.log(plantData);
+   res.end('ok');
+})
+
+// move camera location
+mobile.post('/camera/location', (req, res) => {
+   let targetCameraPosition;
+   if(req.body.plantID == "1") targetCameraPosition = plantData.cameraPosition1;
+   else targetCameraPosition = platData.cameraPosition2;
+
+   moveNum = Math.abs(targetCameraPosition - plantData.cameraPosition);
+
+   if(req.body.targetCameraPosition > plantData.cameraPosition) moveDirection = "camLeft";
+   else moveDirection = "camRight";
+
    res.end('ok');
 })
