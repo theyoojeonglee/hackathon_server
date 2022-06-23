@@ -64,6 +64,7 @@ arduino.post('/', (req, res) => {
       plantData.sun = req.body.sun;
       plantData.waterTank = req.body.waterTank;
    }
+   console.log(plantData);
    res.end('ok');
 })
 
@@ -101,7 +102,7 @@ mobile.put('/plant', (req, res) => {
 // move camera location
 mobile.post('/camera/location', (req, res) => {
    let targetCameraPosition;
-   if(req.body.plantID == "1") targetCameraPosition = plantData.cameraPosition1;
+   if(req.body.plantID == 1) targetCameraPosition = plantData.cameraPosition1;
    else targetCameraPosition = plantData.cameraPosition2;
 
    moveNum = Math.abs(targetCameraPosition - plantData.cameraPosition);
