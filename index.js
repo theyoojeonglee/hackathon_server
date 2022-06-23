@@ -52,10 +52,10 @@ arduino.get('/', async (req, res) => {
       res.send({"message": "waterTankOn", "success": "true"});
    }
    else if(waterOffFlag) {
-      waterOffFlag = false;
-      console.log('turning water off');
-      await sleep(5000);
-      res.send({"message": "waterTankOff", "success": "true"});
+      // waterOffFlag = false;
+      // console.log('turning water off');
+      // await sleep(5000);
+      // res.send({"message": "waterTankOff", "success": "true"});
    }
    else if(moveNum > 0){
       console.log(`movenum ${moveNum}`)
