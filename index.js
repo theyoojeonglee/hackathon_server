@@ -80,12 +80,12 @@ mobile.get('/water', (req, res) => {
 
 // give current camera position
 // need to check if this is needed
-mobile.get('/camera/position', (req, res) => {
+mobile.get('/camera/direction', (req, res) => {
    res.send({"cameraPosition": plantData.cameraPosition});
 })
 
 // set direction for arduino to move on mobile command
-mobile.post('/camera/position', (req, res) => {
+mobile.post('/camera/direction', (req, res) => {
    directionFlag = true;
    message = req.body.control;
    res.send({"cameraPosition": plantData.cameraPosition});
@@ -102,7 +102,7 @@ mobile.put('/plant', (req, res) => {
 mobile.post('/camera/location', (req, res) => {
    let targetCameraPosition;
    if(req.body.plantID == "1") targetCameraPosition = plantData.cameraPosition1;
-   else targetCameraPosition = platData.cameraPosition2;
+   else targetCameraPosition = plantData.cameraPosition2;
 
    moveNum = Math.abs(targetCameraPosition - plantData.cameraPosition);
 
