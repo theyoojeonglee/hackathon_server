@@ -13,7 +13,7 @@ let moveDirection = "";
 
 let waterFlag = false;
 
-arduino.use(bodyParser.json());
+arduino.use(bodyParser.json({strict: false}));
 arduino.use(bodyParser.urlencoded({ extended: true }));
 
 mobile.use(bodyParser.json());
