@@ -3,17 +3,25 @@ const bodyParser = require('body-parser');
 const arduino = express();
 const mobile = express();
 
-const plantData = {};
+const plantData = {
+};
 
 let directionFlag = false;
-let directionMessage = "";
+let directionMessage = "camLeft";
 
-let moveNum = 0;
+let moveNum = -5;
 let moveDirection = "";
 
 let waterFlag = false;
+let waterOffFlag = false;
 
-arduino.use(bodyParser.json());
+const sleep = (ms) => {
+   return new Promise(resolve=>{
+       setTimeout(resolve,ms)
+   })
+}
+
+arduino.use(bodyParser.json({strict: false}));
 arduino.use(bodyParser.urlencoded({ extended: true }));
 
 mobile.use(bodyParser.json());
@@ -39,10 +47,20 @@ arduino.get('/', async (req, res) => {
    }
    else if(waterFlag) {
       waterFlag = false;
-      res.send({"message": "waterCommand", "success": "true"});
+      console.log('sending water');
+      waterOffFlag = true;
+      res.send({"message": "waterTankOn", "success": "true"});
+   }
+   else if(waterOffFlag) {
+      waterOffFlag = false;
+      console.log('turning water off');
+      await sleep(5000);
+      res.send({"message": "waterTankOff", "success": "true"});
    }
    else if(moveNum > 0){
-      moveNum -= 2;
+      console.log(`movenum ${moveNum}`)
+      await sleep(1000);
+      moveNum -= 5;
       res.send({"message": moveDirection, "success": "true"});
    }
    else {
@@ -56,7 +74,7 @@ arduino.post('/', (req, res) => {
    if(req.body.cameraPosition) {
       plantData.cameraPosition = req.body.cameraPosition;
    }
-   else {
+   else if(req.body.humidity){
       plantData.humidity = req.body.humidity;
       plantData.temperature = req.body.temperature;
       plantData.ambientHumidity = req.body.ambientHumidity;
@@ -64,6 +82,7 @@ arduino.post('/', (req, res) => {
       plantData.sun = req.body.sun;
       plantData.waterTank = req.body.waterTank;
    }
+   console.log(plantData);
    res.end('ok');
 })
 
@@ -75,6 +94,7 @@ mobile.get('/plant', (req, res) => {
 // send water command to arduino
 mobile.get('/water', (req, res) => {
    waterFlag = true;
+   console.log('water');
    res.end('ok');
 })
 
@@ -87,27 +107,29 @@ mobile.get('/camera/direction', (req, res) => {
 // set direction for arduino to move on mobile command
 mobile.post('/camera/direction', (req, res) => {
    directionFlag = true;
-   message = req.body.control;
+   directionMessage = req.body.control;
+   console.log('direction');
    res.send({"cameraPosition": plantData.cameraPosition});
 })
 
 // set camera position according to plant ID
 mobile.put('/plant', (req, res) => {
-   if(req.body.plantID == '1') plantData.cameraPosition1 = req.body.cameraPosition;
-   else plantData.cameraPosition2 = req.body.cameraPosition;
+   plantData.cameraPosition1 = plantData.cameraPosition;
+   console.log(plantData.cameraPosition1);
    res.end('ok');
 })
 
 // move camera location
 mobile.post('/camera/location', (req, res) => {
-   let targetCameraPosition;
-   if(req.body.plantID == "1") targetCameraPosition = plantData.cameraPosition1;
-   else targetCameraPosition = plantData.cameraPosition2;
+   let targetCameraPosition = plantData.cameraPosition1;
+   // if(req.body.plantId == 1) targetCameraPosition = plantData.cameraPosition1;
+   // else targetCameraPosition = plantData.cameraPosition2;
 
    moveNum = Math.abs(targetCameraPosition - plantData.cameraPosition);
 
-   if(req.body.targetCameraPosition > plantData.cameraPosition) moveDirection = "camLeft";
-   else moveDirection = "camRight";
+   if(req.body.targetCameraPosition > plantData.cameraPosition) moveDirection = "camRight";
+   else moveDirection = "camLeft";
+   console.log(`move ${moveNum}`);
 
    res.end('ok');
 })
